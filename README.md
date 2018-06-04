@@ -13,14 +13,14 @@ docker build -t lovelace .
 ..and then starting a container in interactive mode
 
 ```bash
-docker container run -it haterz
+docker container run -it lovelace 
 ```
 
 #### Downloading dependencies
 If you don't download the docker image (recommended) then you can ensure you have the corrected dependencies by running the `requirements.txt`. If going this route, I would recommend a virtualenv or conda env before downloading. 
 
 ```bash
-cd /path/to/haterz
+cd /path/to/lovelace
 pip3 -r requirements.txt
 ```
 
