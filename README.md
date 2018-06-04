@@ -6,8 +6,8 @@ Neural networks for sentiment analysis and phrase classification.
 #### Docker
 You can build the docker image
 ```bash
-cd /path/to/haterz
-docker build -t haterz .
+cd /path/to/lovelace
+docker build -t lovelace .
 ```
 
 ..and then starting a container in interactive mode
