@@ -9,6 +9,7 @@ embeddings can either be pre-trained or randomly initialized upon network instan
 """
 import tensorflow as tf
 
+
 class CNN(object):
     """Convolutional neural network class for sentiment analysis.
     """
@@ -39,7 +40,6 @@ class CNN(object):
         self.optimizer = self._train_step(self.loss, learning_rate)
         self.merged = tf.summary.merge_all()
 
-        
     def _embed(self, word_vectors, inputs, batch_size, seq_len, embed_dim, vocab_size):
         """Creates a 3d tensor of word embeddings of the size [batch_size, seq_len, embed_dim].
         

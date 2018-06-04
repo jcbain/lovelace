@@ -24,7 +24,7 @@ class DataOverlord(object):
         one_hot_array[np.arange(zeros_n_rows), sentiments] = 1
 
         self._sentiments = one_hot_array
-        self.samples = data.as_matrix(columns=['SentimentText'])[:, 0]
+        self.samples = data.as_matrix(columns=['Text'])[:, 0]
 
         if remove_retweets:
             self._sentiments = np.delete(self._sentiments, self._find_retweet_indexes(), 0)
@@ -156,7 +156,7 @@ class DataOverlord(object):
 
 class DataPleb(object):
     def __init__(self, vocab, sequence_len, data_file=None, indiv_text=None, remove_retweets=True,
-                 remove_mentioner=True, text_name='SentimentText', extra_atts=None, encoding=None, sep='|', qchar='&'):
+                 remove_mentioner=True, text_name='Text', extra_atts=None, encoding=None, sep='|', qchar='&'):
         self.vocab = vocab
         self._text_name = text_name
         self._input_file = data_file

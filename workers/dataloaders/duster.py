@@ -9,7 +9,7 @@ def clean_data(data, remove_retweets, remove_mentioner):
     cleans the input data and returns a list of cleaned up texts
 
     Returns
-    ----
+    -------
     cleaned list of texts
     """
     # option to remove retweets and collect indexes
@@ -53,6 +53,7 @@ def clean_data(data, remove_retweets, remove_mentioner):
 
     return ret, clean_ids
 
+
 def create_tensors(text, vocab):
     tensors = []
     for row in text:
@@ -94,7 +95,7 @@ def pad_tensors(tensors, sequence_len=None):
     pads list with zeros according to sequence_len
 
     Parameters
-    ----
+    ----------
     tensors: list
       tensor list to be padded
 
@@ -103,7 +104,7 @@ def pad_tensors(tensors, sequence_len=None):
       in the list of sequences.
 
     Returns
-    ----
+    -------
     padding_length used and numpy array of padded tensors.
     """
     # Find maximum length m and ensure that m>=sequence_len
