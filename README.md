@@ -24,3 +24,10 @@ cd /path/to/haterz
 pip3 -r requirements.txt
 ```
 
+
+### Training the Networks
+
+```bash
+python train_mulder.py
+```
+
