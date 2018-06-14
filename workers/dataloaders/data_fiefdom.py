@@ -7,7 +7,7 @@ from workers.dataloaders.duster import *
 
 class DataOverlord(object):
     def __init__(self, data_file, embedding_file, sequence_len=None, test_size=0.2,
-                 val_samples=100, remove_retweets=True, remove_mentioner=True, random_state=0):
+                 val_samples=100, remove_retweets=True, remove_mentioner=True, remove_stopwords=False, random_state=0):
 
         self._input_file = data_file
         self.sequence_len = sequence_len
@@ -30,7 +30,7 @@ class DataOverlord(object):
             self._sentiments = np.delete(self._sentiments, self._find_retweet_indexes(), 0)
 
         self.data, _ = clean_data(data=self.samples, remove_retweets=remove_retweets,
-                                  remove_mentioner=remove_mentioner)
+                                  remove_mentioner=remove_mentioner, remove_stopwords=remove_stopwords)
         self.embeddings, self.vocab = self._embed(embedding_file=embedding_file)
         self.vocab_size = len(self.vocab)
 
@@ -171,7 +171,7 @@ class DataPleb(object):
         self.samples = data.as_matrix(columns=[text_name])[:, 0]
 
         self.data, self.clean_ids = clean_data(data=self.samples, remove_retweets=remove_retweets,
-                                               remove_mentioner=remove_mentioner)
+                                               remove_mentioner=remove_mentioner, remove_stopwords=False)
         self.atts = self._atts(data=data)
 
         self.vocab_size = len(self.vocab)
