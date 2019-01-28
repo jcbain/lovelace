@@ -1,13 +1,13 @@
-import pickle
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+
+from random import shuffle
 from workers.dataloaders.duster import *
 
 
 class DataOverlord(object):
-    def __init__(self, data_file, embedding_file, sequence_len=None, test_size=0.2,
-                 val_samples=100, remove_retweets=True, remove_mentioner=True, remove_stopwords=False, random_state=0):
+    def __init__(self, data_file, embedding_file, sequence_len=None, test_size=0.2, val_samples=100,
+                 remove_retweets=True, remove_mentioner=True, remove_stopwords=True, random_state=0):
 
         self._input_file = data_file
         self.sequence_len = sequence_len
@@ -23,11 +23,12 @@ class DataOverlord(object):
         one_hot_array = np.zeros((zeros_n_rows, zeros_n_cols))
         one_hot_array[np.arange(zeros_n_rows), sentiments] = 1
 
-        self._sentiments = one_hot_array
-        self.samples = data.as_matrix(columns=['Text'])[:, 0]
+        self.sentiments = one_hot_array
+        self.samples = data.as_matrix(columns=['SentimentText'])[:, 0]
 
+        # remove retweets from target column if specified
         if remove_retweets:
-            self._sentiments = np.delete(self._sentiments, self._find_retweet_indexes(), 0)
+            self.sentiments = np.delete(self.sentiments, self._find_retweet_indexes(), 0)
 
         self.data, _ = clean_data(data=self.samples, remove_retweets=remove_retweets,
                                   remove_mentioner=remove_mentioner, remove_stopwords=remove_stopwords)
@@ -39,28 +40,34 @@ class DataOverlord(object):
         self.tensors = pad_tensors(tensors=self.tensors_unpadded, sequence_len=sequence_len)
 
         # Split data in train, validation and test sets
-        indices = np.arange(len(self._sentiments))
-        x_tv, self._x_test, y_tv, self._y_test, tv_indices, test_indices = train_test_split(
-            self.tensors,
-            self._sentiments,
-            indices,
-            test_size=test_size,
-            random_state=random_state,
-            stratify=self._sentiments[:, 0])
-        self._x_train, self._x_val, self._y_train, self._y_val, train_indices, val_indices = train_test_split(
-            x_tv,
-            y_tv,
-            tv_indices,
-            test_size=val_samples,
-            random_state=random_state,
-            stratify=y_tv[:, 0])
-        self._val_indices = val_indices
-        self._test_indices = test_indices
-        self._train_lengths = self.tensor_lengths[train_indices]
-        self._val_lengths = self.tensor_lengths[val_indices]
-        self._test_lengths = self.tensor_lengths[test_indices]
-        self._current_index = 0
-        self._epoch_completed = 0
+        indexes = np.arange(len(self.sentiments))
+
+        self.test_indexes, non_test_indexes = self._create_test_indexes(indexes, test_size)
+        self.val_indexes, self.train_indexes = self._create_valid_indexes(non_test_indexes, val_samples)
+
+        # Split data in train, validation and test sets
+        # indices = np.arange(len(self._sentiments))
+        # x_tv, self._x_test, y_tv, self._y_test, tv_indices, test_indices = train_test_split(
+        #    self.tensors,
+        #    self._sentiments,
+        #    indices,
+        #    test_size=test_size,
+        #    random_state=random_state,
+        #    stratify=self._sentiments[:, 0])
+        # self._x_train, self._x_val, self._y_train, self._y_val, train_indices, val_indices = train_test_split(
+        #    x_tv,
+        #    y_tv,
+        #    tv_indices,
+        #    test_size=val_samples,
+        #    random_state=random_state,
+        #    stratify=y_tv[:, 0])
+        # self._val_indices = val_indices
+        # self._test_indices = test_indices
+        # self._train_lengths = self.tensor_lengths[train_indices]
+        # self._val_lengths = self.tensor_lengths[val_indices]
+        # self._test_lengths = self.tensor_lengths[test_indices]
+        # self._current_index = 0
+        # self._epoch_completed = 0
 
     def _embed(self, embedding_file):
         if embedding_file == "None" or embedding_file is None:
@@ -79,11 +86,10 @@ class DataOverlord(object):
         return embeddings, vocab
 
     def _find_retweet_indexes(self):
-        """
-        finds those samples in a file that begin with 'RT' and therefore a retweet
+        """Finds the indexes of those rows that begin with 'RT'.
 
         Returns
-        ----
+        -------
         a list of indexes of those rows that are retweets
         """
         counter = 0
@@ -96,67 +102,81 @@ class DataOverlord(object):
 
         return removal_indexes
 
-    def next_batch(self, batch_size):
-        """
-        provides a new batch of rows of the size [batch_size]
+    def _create_test_indexes(self, indexes, test_prop):
+        test_num = round(len(indexes) * test_prop)
+        test_indexes = np.copy(indexes)
+        shuffle(test_indexes)
+        test_indexes = test_indexes[0:test_num]
+        non_test_indexes = np.array([v for v in indexes if v not in test_indexes])
 
-        Parameters
-        ----
-        batch_size: int
-          the number of rows to be returned in that batch
+        return test_indexes, non_test_indexes
 
-        Returns
-        ----
-        samples of the size [batch_size], which inclues:
-          * self._x_train: input tensor
-          * self._y_train: target
-          * self._train_lengths: lenghts of text
-        """
-        start = self._current_index
-        self._current_index += batch_size
-        if self._current_index > len(self._y_train):
-            # Complete epoch and randomly shuffle train samples
-            self._epoch_completed += 1
-            ind = np.arange(len(self._y_train))
-            np.random.shuffle(ind)
-            self._x_train = self._x_train[ind]
-            self._y_train = self._y_train[ind]
-            self._train_lengths = self._train_lengths[ind]
-            start = 0
-            self._current_index = batch_size
-        end = self._current_index
-        return self._x_train[start:end], self._y_train[start:end], self._train_lengths[start:end]
+    def _create_valid_indexes(self, indexes, num_rows):
+        valid_indexes = np.copy(indexes)
+        shuffle(valid_indexes)
+        valid_indexes = valid_indexes[0:num_rows]
+        non_valid_indexes = np.array([v for v in indexes if v not in valid_indexes])
 
-    def get_val_data(self):
-        """
-        gets the validation data
+        return valid_indexes, non_valid_indexes
 
-        Returns
-        -----
-        validation data, which includes:
-          * self._x_val: input tensors
-          * self._y_val: target
-          * self._val_lengths: lengths of text
-        """
-        return self._x_val, self._y_val, self._val_lengths
+    # def next_batch(self, batch_size):
+    #    """Provides a new batch of rows of the size [batch_size].
 
-    def get_test_data(self):
-        """
-        gets the testing data
+    #    Parameters
+    #    ----------
+    #    batch_size: int
+    #      the number of rows to be returned in that batch
 
-        Returns
-        -----
-        testing data, which includes:
-          * self._x_test: input tensors
-          * self._y_test: target
-          * self._test_lengths: lengths of text
-        """
-        return self._x_test, self._y_test, self._test_lengths
+    #    Returns
+    #    -------
+    #    samples of the size [batch_size], which inclues:
+    #      * self._x_train: input tensor
+    #      * self._y_train: target
+    #      * self._train_lengths: lenghts of text
+    #    """
+    #    start = self._current_index
+    #    self._current_index += batch_size
+    #    if self._current_index > len(self._y_train):
+    #        # Complete epoch and randomly shuffle train samples
+    #        self._epoch_completed += 1
+    #        ind = np.arange(len(self._y_train))
+    #        np.random.shuffle(ind)
+    #        self._x_train = self._x_train[ind]
+    #        self._y_train = self._y_train[ind]
+    #        self._train_lengths = self._train_lengths[ind]
+    #        start = 0
+    #        self._current_index = batch_size
+    #    end = self._current_index
+    #    return self._x_train[start:end], self._y_train[start:end], self._train_lengths[start:end]
+
+    # def get_val_data(self):
+    #    """Retrieves the validation data.
+
+    #    Returns
+    #    -------
+    #    validation data, which includes:
+    #      * self._x_val: input tensors
+    #      * self._y_val: target
+    #      * self._val_lengths: lengths of text
+    #    """
+    #    return self._x_val, self._y_val, self._val_lengths
+
+    # def get_test_data(self):
+    #    """Retrieves the testing data.
+
+    #    Returns
+    #    -------
+    #    testing data, which includes:
+    #      * self._x_test: input tensors
+    #      * self._y_test: target
+    #      * self._test_lengths: lengths of text
+    #    """
+    #    return self._x_test, self._y_test, self._test_lengths
 
 
 class DataPleb(object):
     def __init__(self, vocab, sequence_len, data_file=None, indiv_text=None, remove_retweets=True,
-                 remove_mentioner=True, text_name='Text', extra_atts=None, encoding=None, sep='|', qchar='&'):
+                 remove_mentioner=True, text_name='SentimentText', extra_atts=None, encoding=None, sep='|', qchar='&'):
         self.vocab = vocab
         self._text_name = text_name
         self._input_file = data_file
