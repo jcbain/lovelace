@@ -3,8 +3,11 @@ import pickle
 
 import tensorflow as tf
 
+from random import shuffle
+from numpy import copy
 from nn.mulder.cnn import CNN
 from workers.dataloaders.data_fiefdom import DataOverlord
+from workers.dataloaders.duster import *
 
 tf.flags.DEFINE_string('data_file', 'data/sample/data.csv',
                        """Data file containing text along with their labels (must have the columns `Text` and 
@@ -65,7 +68,7 @@ validation_writer = tf.summary.FileWriter(summaries_dir + '/validation')
 if tf.__version__ in ['1.2.1', '1.4.0']:
     FLAGS._parse_flags()
     config = FLAGS.__dict__['__flags']
-elif tf.__version__ in ['1.5.0', '1.5.1']:
+elif tf.__version__ in ['1.5.0', '1.5.1', '1.12.0']:
     config = FLAGS.flag_values_dict()
 with open('{}/config.pkl'.format(summaries_dir), 'wb') as f:
     pickle.dump(config, f)
@@ -83,6 +86,15 @@ vocab_atts = {
 with open('{}/vocab_atts.pkl'.format(summaries_dir), 'wb') as f:
     pickle.dump(vocab_atts, f)
 
+# Save data attribtutes
+data_atts = {
+    'testing_indexes': do.test_indexes,
+    'validate_indexes': do.val_indexes,
+    'train_indexes': do.train_indexes
+}
+with open('{}/data_atts.pkl'.format(summaries_dir), 'wb') as f:
+    pickle.dump(data_atts, f)
+
 
 # Make FLAGS.fiter_sizes into a list
 filter_sizes = [int(i) for i in FLAGS.filter_sizes.split(',')]
@@ -96,31 +108,44 @@ nn = CNN(num_classes=FLAGS.num_classes, vocab_size=do.vocab_size,
 sess = tf.Session()
 sess.run(nn.initialize_all_variables())
 saver = tf.train.Saver()
-x_val, y_val, val_seq_len = do.get_val_data()
+# x_val, y_val, val_seq_len = do.get_val_data()
+x_val, y_val = do.tensors[do.val_indexes], do.sentiments[do.val_indexes]
+data, targets = do.tensors, do.sentiments
+batch_indexes = make_batch_indexes(FLAGS.batch_size, len(do.train_indexes))
 
 for i in range(FLAGS.num_epochs):
-    batch_x, batch_y, _ = do.next_batch(FLAGS.batch_size)
-    sess.run(nn.optimizer, feed_dict={nn.inputs: batch_x,
-                                      nn.target: batch_y,
-                                      nn.dropout: FLAGS.dropout_keep})
-    
-    # Write summary to tensorboard
-    if (i + 1) % FLAGS.write_summary_every == 0:
-        accuracy, loss, summary, embeds = sess.run([nn.accuracy, nn.loss, nn.merged, nn.embeddings],
-                                                   feed_dict={nn.inputs: batch_x,
-                                                              nn.target: batch_y,
-                                                              nn.dropout: FLAGS.dropout_keep})
-        train_writer.add_summary(summary, i)
-        print("epoch {0}: loss= {1:.4f} | accuracy= {2:.4f}".format(i, loss, accuracy))
+    epoch_indexes = copy(do.train_indexes)
+    shuffle(epoch_indexes)
+    batch_generator = create_batch(batch_indexes)
+    try:
+        if (i + 1) % FLAGS.write_summary_every == 0:
+            accuracy, loss, summary, embeds = sess.run([nn.accuracy, nn.loss, nn.merged, nn.embeddings],
+                                                       feed_dict={nn.inputs: batch_x,
+                                                                  nn.target: batch_y,
+                                                                  nn.dropout: FLAGS.dropout_keep})
+            train_writer.add_summary(summary, i)
+            print("epoch {0}: loss= {1:.4f} | accuracy= {2:.4f}".format(i, loss, accuracy))
+    except:
+        pass
 
-    # Check validation performance
-    if (i + 1) % FLAGS.validate_every == 0:
-        val_loss, val_accuracy, val_summary = sess.run([nn.loss, nn.accuracy, nn.merged],
-                                                       feed_dict={nn.inputs: x_val,
-                                                                  nn.target: y_val,
-                                                                  nn.dropout: 1.0})
-        validation_writer.add_summary(val_summary, i)
-        print("  VALIDATION LOSS: {0:.4f} (accuracy {1:.4f})".format(val_loss, val_accuracy))
+    try:
+        if (i + 1) % FLAGS.validate_every == 0:
+            val_loss, val_accuracy, val_summary = sess.run([nn.loss, nn.accuracy, nn.merged],
+                                                           feed_dict={nn.inputs: x_val,
+                                                                      nn.target: y_val,
+                                                                      nn.dropout: 1.0})
+            validation_writer.add_summary(val_summary, i)
+            print("  VALIDATION LOSS: {0:.4f} (accuracy {1:.4f})".format(val_loss, val_accuracy))
+    except:
+        pass
+
+    for j in range(len(batch_indexes)):
+        start_end_ind = next(batch_generator)
+        batch_x = data[epoch_indexes[start_end_ind[0]: start_end_ind[1]]]
+        batch_y = targets[epoch_indexes[start_end_ind[0]: start_end_ind[1]]]
+        sess.run(nn.optimizer, feed_dict={nn.inputs: batch_x,
+                                          nn.target: batch_y,
+                                          nn.dropout: FLAGS.dropout_keep})
 
 checkpoint_file = '{}/model.ckpt'.format(summaries_dir)
 save_path = saver.save(sess, checkpoint_file)

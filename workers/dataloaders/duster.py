@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2018 James Bain
+# Copyright (c) 2018 Socially Compute
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -236,3 +236,57 @@ def remove_common_words(data, proportion):
     top_words_removed = np.array(top_words_removed)
 
     return top_words_removed
+
+
+def make_batch_indexes(size, data_len):
+    """
+    Creates a list of start and stop indexes where start is <size> away from end.
+
+    The start and stop indexes represent the start and stop index of each batch ranging for the entire data set.
+
+    Parameters
+    ----------
+    size: int
+        The size of the batches.
+
+    data_len: int
+        The number of rows in the data.
+
+    Returns
+    -------
+    list:
+        A list of list that where the first item in the sublist is the start index and the second is the end index of
+        that batch.
+    """
+    start_i = 0
+    end_i = size
+    index_couples = []
+    while end_i <= data_len:
+        couplet = [start_i, end_i]
+        index_couples.append(couplet)
+        start_i = end_i
+        end_i += size
+
+    final_couplet = [end_i - size, data_len]
+    index_couples.append(final_couplet)
+
+    return index_couples
+
+
+def create_batch(batch_indexes):
+    """
+    Generator of batches.
+
+    Iterates through the batch start and stop indexes created by `make_batch_indexes()`.
+
+    Parameters
+    ----------
+    batch_indexes: list
+       Takes in the output of `make_batch_indexes()`.
+
+    Returns
+    -------
+    generator
+    """
+    for batch in batch_indexes:
+        yield batch
