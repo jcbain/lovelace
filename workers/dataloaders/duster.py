@@ -103,7 +103,7 @@ def clean_data(data, remove_retweets, remove_mentioner, remove_stopwords, stopwo
     return ret, clean_ids
 
 
-def create_tensors(text, vocab):
+def create_tensors(text, vocab_dict):
     """Creates tensors for each of the phrases in the corpus given a vocabulary.
 
     Parameters
@@ -111,7 +111,7 @@ def create_tensors(text, vocab):
     text: list
         A list of lists of words.
 
-    vocab: dict
+    vocab_dict: dict
         A dict of vocab words that maps the id to the words
 
     Returns
@@ -121,7 +121,7 @@ def create_tensors(text, vocab):
     """
     tensors = []
     for row in text:
-        tensor_phrase = [list(vocab).index(x) for x in row.split() if x in vocab]
+        tensor_phrase = [vocab_dict[x] for x in row.split() if x in vocab_dict]
         tensors.append(tensor_phrase)
 
     tensor_lengths = [len(t) for t in tensors]

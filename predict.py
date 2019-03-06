@@ -72,10 +72,10 @@ with graph.as_default():
 
     # Recover input/output tensors
     input = graph.get_operation_by_name('input').outputs[0]
-    target = graph.get_operation_by_name('target').outputs[0]
+    #target = graph.get_operation_by_name('target').outputs[0]
     dropout_keep_prob = graph.get_operation_by_name('dropout_keep_prob').outputs[0]
     predict = graph.get_operation_by_name('final_layer/softmax/predictions').outputs[0]
-    accuracy = graph.get_operation_by_name('accuracy/accuracy').outputs[0]
+    #accuracy = graph.get_operation_by_name('accuracy/accuracy').outputs[0]
 
     # Perform prediction
     pred = sess.run([predict],
