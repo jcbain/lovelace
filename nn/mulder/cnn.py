@@ -9,7 +9,6 @@ embeddings can either be pre-trained or randomly initialized upon network instan
 """
 import tensorflow as tf
 
-
 class CNN(object):
     """Convolutional neural network class for sentiment analysis.
     """
@@ -19,6 +18,7 @@ class CNN(object):
 
         self.inputs = tf.placeholder(tf.int32, [None, seq_len], name="input")
         self.target = tf.placeholder(tf.float32, [None, num_classes], name="target")
+        self.num_classes = num_classes
         self.dropout = tf.placeholder(tf.float32, name='dropout_keep_prob')
         self._num_total_filters = num_filters * len(filter_sizes)
         self.l2_loss = tf.constant(0.0)
@@ -36,10 +36,14 @@ class CNN(object):
         self.prediction = self._predict(scores=self.scores)
         self.losses = self._losses(self.scores, self.target)
         self.accuracy = self._calculate_accuracy(self.prediction, self.target)
+        self.tp, self.fn, self.fp = self._find_positives_negatives(self.prediction, self.target)
+        self.recall = self._calculate_recall(self.tp, self.fn)
+        self.precision = self._calculate_precision(self.tp, self.fp)
         self.loss = self._calculate_loss(self.losses, l2_reg_lambda=l2_reg_lambda)
         self.optimizer = self._train_step(self.loss, learning_rate)
         self.merged = tf.summary.merge_all()
 
+        
     def _embed(self, word_vectors, inputs, batch_size, seq_len, embed_dim, vocab_size):
         """Creates a 3d tensor of word embeddings of the size [batch_size, seq_len, embed_dim].
         
@@ -151,6 +155,57 @@ class CNN(object):
             accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32), name='accuracy')
             tf.summary.scalar('accuracy', accuracy)
         return accuracy
+
+    def _find_positives_negatives(self, prediction, target):
+        """Finds the true positives, false positive and false negatives for each round of predictions.
+
+        Parameters
+        ----------
+        prediction : tensorflow.Tensor
+            A tensor of predictions.
+
+        target : tensorflow.placeholder
+            The actual class values.
+
+        Returns
+        -------
+        tuple:
+            The true positive, false positive and false negative for the round of predictions.
+        """
+        confusion = tf.confusion_matrix(tf.argmax(target, 1), tf.argmax(prediction, 1))
+        if self.num_classes == 2:
+            tp = tf.reduce_sum(tf.diag_part(confusion))
+            fn = confusion[1, 0]
+            fp = confusion[0, 1]
+        else:
+            tp = tf.diag_part(confusion)
+            fn = []
+            fp = []
+            for i in range(0, self.num_classes):
+                fn.append(tf.reduce_sum(confusion[i, :]) - confusion[i, i])
+                fp.append(tf.reduce_sum(confusion[:, i]) - confusion[i, i])
+
+        return tp, fn, fp
+
+    def _calculate_recall(self, tp, fn):
+        with tf.name_scope('recall'):
+            recall = tf.divide(tp, tf.add(tp, fn))
+            if self.num_classes == 2:
+                tf.summary.scalar('recall', recall)
+            else:
+                for i in range(0, self.num_classes):
+                    tf.summary.scalar('recall_{}'.format(i), recall[i])
+        return recall
+
+    def _calculate_precision(self, tp, fp):
+        with tf.name_scope('precision'):
+            prec = tf.divide(tp, tf.add(tp, fp))
+            if self.num_classes == 2:
+                tf.summary.scalar('precision', prec)
+            else:
+                for i in range(0, self.num_classes):
+                    tf.summary.scalar('precision_{}'.format(i), prec[i])
+        return prec
 
     def _losses(self, scores, target):
         with tf.name_scope('cross_entropy'):

@@ -1,6 +1,7 @@
+# import pickle
 import pandas as pd
 import numpy as np
-
+# from sklearn.model_selection import train_test_split
 from random import shuffle
 from workers.dataloaders.duster import *
 
@@ -34,8 +35,9 @@ class DataOverlord(object):
                                   remove_mentioner=remove_mentioner, remove_stopwords=remove_stopwords)
         self.embeddings, self.vocab = self._embed(embedding_file=embedding_file)
         self.vocab_size = len(self.vocab)
+        self.vocab_dict = dict(zip(self.vocab, list(range(self.vocab_size))))
 
-        self.tensors_unpadded, self.tensor_lengths = create_tensors(text=self.data, vocab=self.vocab)
+        self.tensors_unpadded, self.tensor_lengths = create_tensors(text=self.data, vocab_dict=self.vocab_dict)
 
         self.tensors = pad_tensors(tensors=self.tensors_unpadded, sequence_len=sequence_len)
 
@@ -178,6 +180,8 @@ class DataPleb(object):
     def __init__(self, vocab, sequence_len, data_file=None, indiv_text=None, remove_retweets=True,
                  remove_mentioner=True, text_name='SentimentText', extra_atts=None, encoding=None, sep='|', qchar='&'):
         self.vocab = vocab
+        self.vocab_size = len(self.vocab)
+        self.vocab_dict = dict(zip(self.vocab, list(range(self.vocab_size))))
         self._text_name = text_name
         self._input_file = data_file
         self._input_phrase = indiv_text
@@ -194,9 +198,7 @@ class DataPleb(object):
                                                remove_mentioner=remove_mentioner, remove_stopwords=False)
         self.atts = self._atts(data=data)
 
-        self.vocab_size = len(self.vocab)
-
-        tensors_unpadded, self.tensor_lengths = create_tensors(text=self.data, vocab=self.vocab)
+        tensors_unpadded, self.tensor_lengths = create_tensors(text=self.data, vocab_dict=self.vocab_dict)
         self.tensors_unpadded = remove_fat(tensor_lengths=self.tensor_lengths, tensors=tensors_unpadded,
                                            sequence_len=sequence_len)
 
