@@ -25,9 +25,9 @@ pip3 -r requirements.txt
 ```
 
 
-### Training the Networks
-
+### Training an Anger Model 
+To train an anger model, using the modified [SemEval 2018 Task 1 data](https://competitions.codalab.org/competitions/17751), and using pre-trained [GLoVe word vectors](https://nlp.stanford.edu/projects/glove/), run the following in a terminal. 
 ```bash
-python train_mulder.py
+python train_scully.py --data_file data/semeval/rawdata/train/training_anger_tri_class.csv  --embedding_file ~/Dropbox/tweets/model_data/pretrained_embeddings/twitter100.npz  --test_size 0.15 --batch_size 128 --hidden_dim 120 --num_classes 3 --num_epochs 5000 --learning_rate 0.00001 --embed_dim 100 --cell_type "lstm" --num_layers 2
 ```
 
