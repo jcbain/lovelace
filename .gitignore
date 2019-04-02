@@ -105,3 +105,6 @@ venv.bak/
 
 # PyCharm
 **/.idea/**
+
+# cached and stored
+**/.DS_Store
