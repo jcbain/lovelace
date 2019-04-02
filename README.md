@@ -2,6 +2,8 @@
 
 Neural networks for sentiment analysis and phrase classification.
 
+**NOTE:** To replicate the training and classification process of the article *The Border Effect: Analyzing the Geographic Relationship of Angry Immigration Tweets Classified by a Gated Recurrent Unit*, following the replication steps in the `docs/training_anger_model.ipynb` notebook.
+
 ## Installation
 #### Docker
 You can build the docker image
