@@ -6,6 +6,8 @@ Neural networks for sentiment analysis and phrase classification.
 
 ## Installation
 #### Docker
+**Last updated June 3, 2018**
+
 You can build the docker image
 ```bash
 cd /path/to/lovelace
