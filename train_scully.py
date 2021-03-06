@@ -76,7 +76,7 @@ validation_writer = tf.summary.FileWriter(summaries_dir + '/validation')
 if tf.__version__ in ['1.2.1', '1.4.0']:
     FLAGS._parse_flags()
     config = FLAGS.__dict__['__flags']
-elif tf.__version__ in ['1.5.0', '1.5.1', '1.12.0']:
+elif tf.__version__ in ['1.5.0', '1.5.1', '1.12.0', '1.15.2']:
     config =  FLAGS.flag_values_dict()
 with open('{}/config.pkl'.format(summaries_dir), 'wb') as f:
     pickle.dump(config, f)

@@ -19,6 +19,7 @@ class DataOverlord(object):
         # read in the new data file
         data = pd.read_csv(data_file)
         sentiments = np.squeeze(data.as_matrix(columns=['Sentiment']))
+        # sentiments = np.squeeze(data[['Sentiment']].to_numpy())
         zeros_n_rows = len(sentiments)
         zeros_n_cols = len(pd.unique(sentiments))
         one_hot_array = np.zeros((zeros_n_rows, zeros_n_cols))
@@ -26,6 +27,7 @@ class DataOverlord(object):
 
         self.sentiments = one_hot_array
         self.samples = data.as_matrix(columns=['SentimentText'])[:, 0]
+        # self.samples = data[['SentimentText']].to_numpy()[:, 0]
 
         # remove retweets from target column if specified
         if remove_retweets:
@@ -193,6 +195,7 @@ class DataPleb(object):
 
         data = self._data(encoding=encoding, sep=sep, qchar=qchar)
         self.samples = data.as_matrix(columns=[text_name])[:, 0]
+        # self.samples = data[[text_name]].to_numpy()[:, 0]
 
         self.data, self.clean_ids = clean_data(data=self.samples, remove_retweets=remove_retweets,
                                                remove_mentioner=remove_mentioner, remove_stopwords=False)
