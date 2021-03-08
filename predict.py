@@ -1,8 +1,12 @@
 import csv
 import pickle
+import os
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.util import deprecation
 from workers.dataloaders.data_fiefdom import DataPleb
+
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 tf.flags.DEFINE_string('logdir', 'logs/cnn/22_Feb_2018-20_22_02',
                        'Logs directory (example: logs/cnn/22_Feb_2018-20_22_02 ). Must contain (at least):\n'
@@ -28,10 +32,17 @@ tf.flags.DEFINE_string('delimiter', '|',
                        'Delimiter for the file.')
 tf.flags.DEFINE_string('qchar', '&',
                        'Quoted character for the file.')
+tf.flags.DEFINE_bool('nowarn', False,
+                    'Dont print warnings option')
 
 
 
 FLAGS = tf.flags.FLAGS
+
+if FLAGS.nowarn == True:
+    deprecation._PRINT_DEPRECATION_WARNINGS = False
+    if type(tf.contrib) != type(tf): tf.contrib._warning = None
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # Load configuration
 with open('{}/config.pkl'.format(FLAGS.logdir), 'rb') as f:
